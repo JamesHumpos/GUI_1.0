@@ -16,7 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from tkinter.font import names
 import psutil
 import shutil
-from PyPDF2 import PdfFileMerger, PdfFileReader
+from PyPDF2 import PdfFileMerger, PdfFileReader, PdfFileWriter
 import subprocess
 import http.client
 import pathlib
@@ -32,19 +32,19 @@ import time as pause
 
 ### Once AT TOP prices
 
-#today = date.today()
-#conn = http.client.HTTPSConnection("horse-racing.p.rapidapi.com")
+today = date.today()
+conn = http.client.HTTPSConnection("horse-racing.p.rapidapi.com")
 
 APIheaders = {
     'X-RapidAPI-Host': "horse-racing.p.rapidapi.com",
     'X-RapidAPI-Key': "secret"
     }
 
-#conn.request("GET", "/racecards?date={}".format(today), headers=APIheaders)
-#res = conn.getresponse()
-#data = res.read()
+conn.request("GET", "/racecards?date={}".format(today), headers=APIheaders)
+res = conn.getresponse()
+data = res.read()
 
-#pathlib.Path('Downloads/data.json').write_bytes(data)
+pathlib.Path('Downloads/data.json').write_bytes(data)
 df = pd.read_json('Downloads/data.json')
 df['time'] = df["date"].astype(str).str.extract('(\d+:\d+:\d+)')
 RacesAPI = df[["course", "time","id_race"]]
@@ -59,16 +59,23 @@ def HomePress():
     Window2_TV.hide()
     Window5_mprice.hide()
     Window5a_rprice.hide()
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
-
+    Window5b_rprice.hide()
 
 def PricesPress():
     Window5_mprice.show(wait = True)
     Window2_TV.hide()
-
-### Each time prices clicked
+    Window3_RaceCard.hide()
+    Window2_TV.hide()
     
+### Each time prices clicked
+
+#def maketkexample():
+#    style = ttk.Style()
+#    style.configure("Treeview.Heading", highlightthickness=4, bd=0, font=('Calibri', 50))
+#    tv = ttk.Treeview(Window5b_rprice.tk,style="Treeview.Heading")
+#    Window5b_rprice.add_tk_widget(tv)
+#    Window5b_rprice.show()
+
 def MPChoiceBut():
     global Choiceone
     Choiceone = MPChoice.value
@@ -82,14 +89,14 @@ def MeetingTimeProd(MeetingChosen):
     global RPChoice
     if 'RPChoice' in globals():
         RPChoice.destroy()
-        RPChoice = ButtonGroup(Boxraceprice2, options=RacesAPIChoice["time"],command=HomePress,width="fill",height="fill",align="right")
+        RPChoice = ButtonGroup(Boxraceprice2, options=RacesAPIChoice["time"],command=RPChoiceBut,width="fill",height="fill",align="right")
         RPChoice.text_size = 20
         for radio_button in RPChoice.children:
             radio_button.tk.config(borderwidth=5)
             radio_button.tk.config(bg="gainsboro")
             radio_button.tk.config(relief="raised")
     else:
-        RPChoice = ButtonGroup(Boxraceprice2, options=RacesAPIChoice["time"],command=HomePress,width="fill",height="fill",align="right")
+        RPChoice = ButtonGroup(Boxraceprice2, options=RacesAPIChoice["time"],command=RPChoiceBut,width="fill",height="fill",align="right")
         RPChoice.text_size = 20
         for radio_button in RPChoice.children:
             radio_button.tk.config(borderwidth=5)
@@ -105,7 +112,6 @@ def RPChoiceBut():
     global chosen_race
     chosen_race = RacesAPI.loc[RacesAPI['time'] == RPChoice.value, 'id_race'].iloc[0]
     changeschoice(chosen_race)
-
 
 def changeschoice(chosen_race):
     chosen_race = chosen_race
@@ -169,25 +175,26 @@ def cleanracedata(racedata):
     showtable(horseraceall)
     
 def showtable(chosendata):
-    ws = tkintopt.Tk()
-    ws.title('Prices')
-    ws.geometry('1300x600')
-    ws['bg']='#fb0'
     style = ttk.Style()
-    style.configure("mystyle.Treeview", highlightthickness=1, bd=0, font=('Calibri', 11))
-    tv = ttk.Treeview(ws,style="mystyle.Treeview")
+    style.configure("Treeview.Heading", highlightthickness=4, bd=0, font=('Calibri', 50))
+    tv = ttk.Treeview(Window5b_rprice.tk,style="Treeview.Heading")
     tv["columns"]=list(chosendata.columns)
     tv["show"]="headings"
-    for column in tv["columns"]:
-        tv.heading(column,text=column)
+    for columns in tv["columns"]:
+        tv.heading(columns,text=columns)
+    tv.column("Horse",width=180)
+    tv.column("Age",width=50)
+    tv.column("Odds",width=120)
+    tv.column("Weight",width=50)
+    tv.column("Running",width=50)
+    tv.column("Number",width=50)
+    tv.column("Jockey / Trainer",width=300)
     chosendata_rows = chosendata.to_numpy().tolist()
     for row in chosendata_rows:
         tv.insert("","end",values=row)
-    global showtablecalled
-    showtablecalled == True
-    tv.pack()
-    Boxracepricer1.add_tk_widget(tv)
+    Window5b_rprice.add_tk_widget(tv)
     Window5b_rprice.show()
+
 
 
 
@@ -240,8 +247,7 @@ off_button = PhsyicalButton(24)
 def pressed(button):
     if button.pin.number == 15:
         sysCmd.system('sudo killall chromium-browser')
-        if 'showtablecalled' in globals() and showtablecalled == True:
-            tv.pack_forget()
+
     
 ############################################## CARDS SET UP ######################################################
 
@@ -357,56 +363,45 @@ for racepanel in soup.find_all('div', {'class':'cell--link race-grid-col'}):
 ## OLD
 def RaceB1Open():
     webbrowser.get('chromium-browser').open(RaceOddsLinks.loc[RaceOddsLinks['Times'] == button1.text, 'Link'].iloc[0])
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
+    Window5b_rprice.hide()
+    Window3_RaceCard.hide()
+    Window2_TV.hide()
         
 def RaceCardPress():
     Window3_RaceCard.show(wait = True)
     Window2_TV.hide()
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
+    Window5b_rprice.hide()
 
 def WatchRacePress():
     Window2_TV.show(wait = True)
+    Window4b_basic.hide()
+    Window5b_rprice.hide()
     Window3_RaceCard.hide()
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
 
-## CHANGE TO NEW=0 in the actual code to save battery - chromium also and not safari
-def ATRopen():
-    Window2_TV.hide()
-    webbrowser.get('chromium-browser').open('https://www.attheraces.com/atrplayer', new=0)
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
-        
-## CHANGE TO NEW=0 in the actual code - chromium also and not safari
-def RTVopen():
-    Window2_TV.hide()
-    webbrowser.get('chromium-browser').open('https://www.racingtv.com/videos/watch/live', new=0)
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
         
 def OpenallRC():
     webbrowser.get('chromium-browser').open('file:///home/james/Downloads/RacesToday/Final.pdf', new=0)
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
+    Window4b_basic.hide()
+    Window5b_rprice.hide()
+    Window2_TV.hide()
+    Window3_RaceCard.hide()
         
 def ByRaceRC():
     Window4b_basic.show(wait = True)
     Window3_RaceCard.hide()
     Window2_TV.hide()
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
+    Window5b_rprice.hide()
 
 def SimpleMeetingOpen():
     webbrowser.get('chromium-browser').open(Races_By_Meetings.loc[Races_By_Meetings['Meeting'] == SimpleMChoices.value, 'LinksSimple'].iloc[0])
     Window4b_basic.hide()
-    if 'showtablecalled' in globals() and showtablecalled == True:
-        tv.pack_forget()
+    Window5b_rprice.hide()
+    Window2_TV.hide()
+    Window3_RaceCard.hide()
         
 def watchpaddy():
     username = "secret"
-    password = "secret"
+    password = "secret!"
     options = webdriver.ChromeOptions()
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
@@ -427,6 +422,18 @@ def watchpaddy():
     pause.sleep(15)
     button = driver.find_element_by_xpath("/html/body/div[1]/div/div[1]/span")
     button.click()
+    Window4b_basic.hide()
+    Window5b_rprice.hide()
+    Window2_TV.hide()
+    Window3_RaceCard.hide()
+    
+def gethelp():
+    webbrowser.get('chromium-browser').open("https://www.jameshumphreys.xyz/help")
+    Window4b_basic.hide()
+    Window5b_rprice.hide()
+    Window2_TV.hide()
+    Window3_RaceCard.hide()
+
                                     ## Simple GUI for navigating the days races
 
 
@@ -444,6 +451,9 @@ WatchBtnBox = Box(app,align="left",height="fill",width="fill")
 RaceCardButton = PushButton(RaceCardBtnBox, command=RaceCardPress, image="/home/james/Documents/CArds.png")
 LivePriceButton = PushButton(LivePriceBtnBox, command=PricesPress, image="/home/james/Documents/PRices.png")
 WatchRaceButton = PushButton(WatchBtnBox, command=WatchRacePress, image="/home/james/Documents/Watch.png")
+HelpButton = PushButton(app,command=gethelp,text="HELP",align="bottom")
+HelpButton.text_size=25
+HelpButton.bg="red"
 home_button.when_pressed = pressed
 
 ##home_button.wait_for_press()
@@ -496,8 +506,6 @@ Homebuttonpricer = PushButton(Window5b_rprice, command=HomePress,text="HOME", wi
 Homebuttonpricer.text_color = "white"
 Homebuttonpricer.bg = "red"
 Homebuttonpricer.text_size = 20
-
-Boxracepricer1 = Box(Window5b_rprice,height="fill",width="fill",align="left")
 
 
 
